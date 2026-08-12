@@ -73,6 +73,25 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                       ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withAlpha(40),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.amber.shade400),
+                        ),
+                        child: const Text(
+                          'YALNIZCA YÖNETİCİ GİRİŞİ',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 28),
                       TextField(
                         controller: _emailCtrl,
@@ -148,40 +167,16 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: _login,
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      const Divider(),
-                      const SizedBox(height: 12),
-                      Text('Hızlı Giriş (Demo Hesaplar)',
-                          style: Theme.of(context).textTheme.labelSmall),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        alignment: WrapAlignment.center,
-                        children: [
-                          OutlinedButton.icon(
-                            icon: const Icon(Icons.admin_panel_settings, size: 16),
-                            label: const Text('Süper Admin'),
-                            onPressed: () {
-                              setState(() {
-                                _emailCtrl.text = 'admin@bank.com';
-                                _passCtrl.text = 'admin123';
-                                _error = null;
-                              });
-                            },
-                          ),
-                          OutlinedButton.icon(
-                            icon: const Icon(Icons.person, size: 16),
-                            label: const Text('Çalışan'),
-                            onPressed: () {
-                              setState(() {
-                                _emailCtrl.text = 'ahmet@techcorp.com';
-                                _passCtrl.text = '123456';
-                                _error = null;
-                              });
-                            },
-                          ),
-                        ],
+                      const SizedBox(height: 16),
+                      Text(
+                        'Çalışan hesapları bu ekrandan giriş yapamaz. '
+                        'Yalnızca banka yöneticisi oturum açabilir.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
                       ),
                     ],
                   ),
@@ -201,9 +196,9 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _error = 'Lütfen e-posta ve şifrenizi girin.');
       return;
     }
-    final ok = context.read<BankProvider>().login(email, pass);
-    if (!ok) {
-      setState(() => _error = 'E-posta veya şifre hatalı ya da hesap aktif değil.');
+    final err = context.read<BankProvider>().login(email, pass);
+    if (err != null) {
+      setState(() => _error = err);
     }
   }
 }
