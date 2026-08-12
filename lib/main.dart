@@ -8,7 +8,9 @@ import 'screens/employee_dashboard.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('tr_TR', null);
+  try {
+    await initializeDateFormatting('tr_TR', null);
+  } catch (_) {}
   runApp(const BankApp());
 }
 
@@ -24,14 +26,14 @@ class BankApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSwatch(
-            primarySwatch: Colors.indigo,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.indigo,
             brightness: Brightness.dark,
           ),
-          cardTheme: CardTheme(
-            elevation: 4,
+          cardTheme: const CardThemeData(
+            elevation: 3,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.all(Radius.circular(16)),
             ),
           ),
         ),

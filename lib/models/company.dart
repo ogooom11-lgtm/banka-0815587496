@@ -19,9 +19,10 @@ class Company {
       };
 
   factory Company.fromJson(Map<String, dynamic> json) => Company(
-        id: json['id'],
-        name: json['name'],
-        balance: (json['balance'] as num).toDouble(),
-        createdAt: DateTime.parse(json['createdAt']),
+        id: json['id']?.toString() ?? 'comp-0',
+        name: json['name']?.toString() ?? 'Şirket',
+        balance: (json['balance'] as num?)?.toDouble() ?? 0.0,
+        createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
+            DateTime.now(),
       );
 }

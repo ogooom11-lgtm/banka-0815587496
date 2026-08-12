@@ -16,8 +16,16 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _error;
 
   @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final bank = context.watch<BankProvider>();
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -33,6 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Card(
+                elevation: 8,
                 child: Padding(
                   padding: const EdgeInsets.all(32),
                   child: Column(
@@ -44,20 +53,25 @@ class _LoginScreenState extends State<LoginScreen> {
                           color: Theme.of(context).colorScheme.primaryContainer,
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.account_balance,
-                            size: 48,
-                            color:
-                                Theme.of(context).colorScheme.onPrimaryContainer),
+                        child: Icon(
+                          Icons.account_balance,
+                          size: 48,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Text(
                         bank.bankName,
-                        style: Theme.of(context).textTheme.headlineSmall,
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Dijital Banka & Maaş Yönetimi',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
                       ),
                       const SizedBox(height: 28),
                       TextField(
@@ -68,6 +82,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           border: OutlineInputBorder(),
                         ),
                         keyboardType: TextInputType.emailAddress,
+                        onChanged: (_) {
+                          if (_error != null) setState(() => _error = null);
+                        },
                       ),
                       const SizedBox(height: 16),
                       TextField(
@@ -85,13 +102,41 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           border: const OutlineInputBorder(),
                         ),
+                        onChanged: (_) {
+                          if (_error != null) setState(() => _error = null);
+                        },
                         onSubmitted: (_) => _login(),
                       ),
                       if (_error != null) ...[
                         const SizedBox(height: 12),
-                        Text(_error!,
-                            style: TextStyle(
-                                color: Theme.of(context).colorScheme.error)),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .errorContainer
+                                .withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.error_outline,
+                                  size: 18,
+                                  color: Theme.of(context).colorScheme.error),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _error!,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.error,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                       const SizedBox(height: 24),
                       SizedBox(
@@ -103,27 +148,37 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: _login,
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 24),
                       const Divider(),
                       const SizedBox(height: 12),
-                      Text('Hızlı Giriş (Demo)',
+                      Text('Hızlı Giriş (Demo Hesaplar)',
                           style: Theme.of(context).textTheme.labelSmall),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       Wrap(
                         spacing: 8,
+                        runSpacing: 8,
+                        alignment: WrapAlignment.center,
                         children: [
-                          OutlinedButton(
-                            child: const Text('Süper Admin'),
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.admin_panel_settings, size: 16),
+                            label: const Text('Süper Admin'),
                             onPressed: () {
-                              _emailCtrl.text = 'admin@bank.com';
-                              _passCtrl.text = 'admin123';
+                              setState(() {
+                                _emailCtrl.text = 'admin@bank.com';
+                                _passCtrl.text = 'admin123';
+                                _error = null;
+                              });
                             },
                           ),
-                          OutlinedButton(
-                            child: const Text('Çalışan'),
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.person, size: 16),
+                            label: const Text('Çalışan'),
                             onPressed: () {
-                              _emailCtrl.text = 'ahmet@techcorp.com';
-                              _passCtrl.text = '123456';
+                              setState(() {
+                                _emailCtrl.text = 'ahmet@techcorp.com';
+                                _passCtrl.text = '123456';
+                                _error = null;
+                              });
                             },
                           ),
                         ],
@@ -140,9 +195,15 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _login() {
-    final ok = context
-        .read<BankProvider>()
-        .login(_emailCtrl.text.trim(), _passCtrl.text);
-    if (!ok) setState(() => _error = 'E-posta veya şifre hatalı.');
+    final email = _emailCtrl.text.trim();
+    final pass = _passCtrl.text;
+    if (email.isEmpty || pass.isEmpty) {
+      setState(() => _error = 'Lütfen e-posta ve şifrenizi girin.');
+      return;
+    }
+    final ok = context.read<BankProvider>().login(email, pass);
+    if (!ok) {
+      setState(() => _error = 'E-posta veya şifre hatalı ya da hesap aktif değil.');
+    }
   }
 }

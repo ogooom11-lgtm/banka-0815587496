@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Basit kalıcı depolama - SharedPreferences tabanlı
+/// Kalıcı yerel depolama - SharedPreferences tabanlı
 class StorageService {
   static const _usersKey = 'users';
   static const _companiesKey = 'companies';
@@ -12,13 +12,27 @@ class StorageService {
       await SharedPreferences.getInstance();
 
   Future<Map<String, dynamic>> loadAll() async {
-    final p = await _prefs;
-    return {
-      'users': jsonDecode(p.getString(_usersKey) ?? '[]'),
-      'companies': jsonDecode(p.getString(_companiesKey) ?? '[]'),
-      'transactions': jsonDecode(p.getString(_transactionsKey) ?? '[]'),
-      'settings': jsonDecode(p.getString(_settingsKey) ?? '{}'),
-    };
+    try {
+      final p = await _prefs;
+      final usersRaw = p.getString(_usersKey);
+      final compRaw = p.getString(_companiesKey);
+      final txnsRaw = p.getString(_transactionsKey);
+      final setRaw = p.getString(_settingsKey);
+
+      return {
+        'users': usersRaw != null ? jsonDecode(usersRaw) : [],
+        'companies': compRaw != null ? jsonDecode(compRaw) : [],
+        'transactions': txnsRaw != null ? jsonDecode(txnsRaw) : [],
+        'settings': setRaw != null ? jsonDecode(setRaw) : {},
+      };
+    } catch (_) {
+      return {
+        'users': [],
+        'companies': [],
+        'transactions': [],
+        'settings': {},
+      };
+    }
   }
 
   Future<void> saveAll({
@@ -27,15 +41,22 @@ class StorageService {
     required List<Map<String, dynamic>> transactions,
     required Map<String, dynamic> settings,
   }) async {
-    final p = await _prefs;
-    await p.setString(_usersKey, jsonEncode(users));
-    await p.setString(_companiesKey, jsonEncode(companies));
-    await p.setString(_transactionsKey, jsonEncode(transactions));
-    await p.setString(_settingsKey, jsonEncode(settings));
+    try {
+      final p = await _prefs;
+      await p.setString(_usersKey, jsonEncode(users));
+      await p.setString(_companiesKey, jsonEncode(companies));
+      await p.setString(_transactionsKey, jsonEncode(transactions));
+      await p.setString(_settingsKey, jsonEncode(settings));
+    } catch (_) {}
   }
 
   Future<void> clearAll() async {
-    final p = await _prefs;
-    await p.clear();
+    try {
+      final p = await _prefs;
+      await p.remove(_usersKey);
+      await p.remove(_companiesKey);
+      await p.remove(_transactionsKey);
+      await p.remove(_settingsKey);
+    } catch (_) {}
   }
 }
