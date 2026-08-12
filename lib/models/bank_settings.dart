@@ -1,7 +1,7 @@
 class BankSettings {
   double randomDeductionMin;
   double randomDeductionMax;
-  int salaryDay; // her ayın kaçında maaş yatacak
+  int salaryDay; // her ayın kaçında maaş yatacak (1-31)
   String currency;
   String bankName;
 
@@ -22,10 +22,12 @@ class BankSettings {
       };
 
   factory BankSettings.fromJson(Map<String, dynamic> json) => BankSettings(
-        randomDeductionMin: (json['randomDeductionMin'] as num?)?.toDouble() ?? 50,
-        randomDeductionMax: (json['randomDeductionMax'] as num?)?.toDouble() ?? 500,
-        salaryDay: json['salaryDay'] ?? 1,
-        currency: json['currency'] ?? '₺',
-        bankName: json['bankName'] ?? 'Arena Bank',
+        randomDeductionMin:
+            (json['randomDeductionMin'] as num?)?.toDouble() ?? 50.0,
+        randomDeductionMax:
+            (json['randomDeductionMax'] as num?)?.toDouble() ?? 500.0,
+        salaryDay: (json['salaryDay'] as num?)?.toInt() ?? 1,
+        currency: json['currency']?.toString() ?? '₺',
+        bankName: json['bankName']?.toString() ?? 'Arena Bank',
       );
 }

@@ -53,47 +53,71 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           children: [
             const Icon(Icons.account_balance),
             const SizedBox(width: 8),
-            Text(bank.bankName),
+            Flexible(
+              child: Text(
+                bank.bankName,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             const SizedBox(width: 12),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.2),
+                color: Colors.amber.withAlpha(51),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.amber),
               ),
-              child: const Text('SÜPER ADMIN',
-                  style: TextStyle(fontSize: 10, color: Colors.amber)),
+              child: const Text(
+                'SÜPER ADMIN',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.amber,
+                ),
+              ),
             ),
           ],
         ),
         actions: [
           IconButton(
             tooltip: 'Tüm vadesi gelen maaşları öde',
-            icon: const Icon(Icons.payments),
+            icon: const Icon(Icons.payments_outlined),
             onPressed: () {
               final n = bank.processDueSalaries();
-              showSnackBar(context, '$n kullanıcıya maaş ödendi.');
+              if (n > 0) {
+                showSnackBar(context, '$n kullanıcıya maaş ödendi.');
+              } else {
+                showSnackBar(context, 'Ödenecek vadesi gelen maaş bulunamadı.');
+              }
             },
           ),
           IconButton(
             tooltip: 'Rastgele kredi kesintilerini uygula',
-            icon: const Icon(Icons.casino),
+            icon: const Icon(Icons.casino_outlined),
             onPressed: () {
               final n = bank.applyRandomDeductionsToAll();
-              showSnackBar(context, '$n kullanıcıya kesinti uygulandı.');
+              if (n > 0) {
+                showSnackBar(context, '$n kullanıcıya kesinti uygulandı.');
+              } else {
+                showSnackBar(
+                    context, 'Kesinti yapılabilecek bakiyeli kullanıcı bulunamadı.');
+              }
             },
           ),
           const SizedBox(width: 8),
           Center(
-            child: Text(bank.currentUser?.fullName ?? '',
-                style: const TextStyle(fontSize: 13)),
+            child: Text(
+              bank.currentUser?.fullName ?? '',
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            ),
           ),
           const SizedBox(width: 12),
           IconButton(
+            tooltip: 'Çıkış Yap',
             icon: const Icon(Icons.logout),
             onPressed: () => bank.logout(),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: isWide
@@ -125,7 +149,9 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   destinations: [
                     for (int i = 0; i < _titles.length; i++)
                       NavigationDestination(
-                          icon: Icon(_icons[i]), label: _titles[i]),
+                        icon: Icon(_icons[i]),
+                        label: _titles[i],
+                      ),
                   ],
                 ),
               ],

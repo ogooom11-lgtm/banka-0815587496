@@ -1,38 +1,16 @@
 enum TxnType {
-  salary,
-  bonus,
-  penalty,
-  randomDeduction,
-  promotion,
-  transfer,
-  credit,
-  terminationFee,
-  system,
-}
+  salary('Maaş'),
+  bonus('Performans Primi'),
+  penalty('Ceza'),
+  randomDeduction('Rastgele Kredi Kesintisi'),
+  promotion('Terfi'),
+  transfer('Transfer'),
+  credit('Kredi Yükleme'),
+  terminationFee('Sözleşme Fesih Ücreti'),
+  system('Sistem');
 
-extension TxnTypeLabel on TxnType {
-  String get label {
-    switch (this) {
-      case TxnType.salary:
-        return 'Maaş';
-      case TxnType.bonus:
-        return 'Performans Primi';
-      case TxnType.penalty:
-        return 'Ceza';
-      case TxnType.randomDeduction:
-        return 'Rastgele Kredi Kesintisi';
-      case TxnType.promotion:
-        return 'Terfi';
-      case TxnType.transfer:
-        return 'Transfer';
-      case TxnType.credit:
-        return 'Kredi Yükleme';
-      case TxnType.terminationFee:
-        return 'Sözleşme Fesih Ücreti';
-      case TxnType.system:
-        return 'Sistem';
-    }
-  }
+  final String label;
+  const TxnType(this.label);
 }
 
 class Txn {
@@ -65,12 +43,16 @@ class Txn {
       };
 
   factory Txn.fromJson(Map<String, dynamic> json) => Txn(
-        id: json['id'],
-        type: TxnType.values.firstWhere((t) => t.name == json['type']),
-        amount: (json['amount'] as num).toDouble(),
-        fromId: json['fromId'],
-        toId: json['toId'],
-        description: json['description'],
-        date: DateTime.parse(json['date']),
+        id: json['id']?.toString() ?? 'txn-0',
+        type: TxnType.values.firstWhere(
+          (t) => t.name == json['type'],
+          orElse: () => TxnType.system,
+        ),
+        amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+        fromId: json['fromId']?.toString() ?? '',
+        toId: json['toId']?.toString() ?? '',
+        description: json['description']?.toString() ?? '',
+        date: DateTime.tryParse(json['date']?.toString() ?? '') ??
+            DateTime.now(),
       );
 }

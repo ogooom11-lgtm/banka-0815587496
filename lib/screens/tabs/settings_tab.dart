@@ -31,25 +31,66 @@ class _SettingsTabState extends State<SettingsTab> {
     _salaryDay = TextEditingController(text: s.salaryDay.toString());
   }
 
+  void _syncControllersWithSettings() {
+    final s = context.read<BankProvider>().settings;
+    _bankName.text = s.bankName;
+    _currency.text = s.currency;
+    _dedMin.text = s.randomDeductionMin.toStringAsFixed(0);
+    _dedMax.text = s.randomDeductionMax.toStringAsFixed(0);
+    _salaryDay.text = s.salaryDay.toString();
+  }
+
+  @override
+  void dispose() {
+    _bankName.dispose();
+    _currency.dispose();
+    _dedMin.dispose();
+    _dedMax.dispose();
+    _salaryDay.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final cur = context.watch<BankProvider>().currency;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Banka Ayarları',
-              style: Theme.of(context).textTheme.headlineSmall),
+          Text(
+            'Banka ve Sistem Ayarları',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Banka genel kurallarını, para birimini ve kesinti limitlerini yapılandırın.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
           const SizedBox(height: 24),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(
+                    'Genel Parametreler',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 16),
                   TextField(
                     controller: _bankName,
                     decoration: const InputDecoration(
                       labelText: 'Banka Adı',
+                      prefixIcon: Icon(Icons.account_balance),
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -57,7 +98,8 @@ class _SettingsTabState extends State<SettingsTab> {
                   TextField(
                     controller: _currency,
                     decoration: const InputDecoration(
-                      labelText: 'Para Birimi Sembolü',
+                      labelText: 'Para Birimi Sembolü (Örn: ₺, \$, €, ر.ق)',
+                      prefixIcon: Icon(Icons.currency_exchange),
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -66,7 +108,8 @@ class _SettingsTabState extends State<SettingsTab> {
                     controller: _salaryDay,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
-                      labelText: 'Varsayılan Maaş Günü (ayın günü)',
+                      labelText: 'Varsayılan Aylık Maaş Günü (1 - 31)',
+                      prefixIcon: Icon(Icons.calendar_month),
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -75,79 +118,154 @@ class _SettingsTabState extends State<SettingsTab> {
             ),
           ),
           const SizedBox(height: 16),
-          Text('Rastgele Kredi Kesintisi Ayarları',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(20),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _dedMin,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Minimum',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
+                  Text(
+                    'Rastgele Kredi Kesintisi Aralıkları',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextField(
-                      controller: _dedMax,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Maksimum',
-                        border: OutlineInputBorder(),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Çalışan hesaplarından otomatik rastgele kesinti yapılacak alt ve üst limitler:',
+                    style: TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _dedMin,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          decoration: InputDecoration(
+                            labelText: 'Minimum Kesinti ($cur)',
+                            prefixIcon: const Icon(Icons.trending_down),
+                            border: const OutlineInputBorder(),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextField(
+                          controller: _dedMax,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          decoration: InputDecoration(
+                            labelText: 'Maksimum Kesinti ($cur)',
+                            prefixIcon: const Icon(Icons.trending_up),
+                            border: const OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 24),
-          FilledButton.icon(
-            icon: const Icon(Icons.save),
-            label: const Text('Ayarları Kaydet'),
-            onPressed: () {
-              final s = BankSettings(
-                bankName: _bankName.text,
-                currency: _currency.text,
-                salaryDay: int.tryParse(_salaryDay.text) ?? 1,
-                randomDeductionMin:
-                    double.tryParse(_dedMin.text) ?? 50,
-                randomDeductionMax:
-                    double.tryParse(_dedMax.text) ?? 500,
-              );
-              context.read<BankProvider>().updateSettings(s);
-              showSnackBar(context, 'Ayarlar kaydedildi.');
-            },
+          SizedBox(
+            height: 48,
+            child: FilledButton.icon(
+              icon: const Icon(Icons.save),
+              label: const Text('Ayarları Kaydet'),
+              onPressed: () {
+                final name = _bankName.text.trim();
+                final currencySym = _currency.text.trim();
+                final sDay = int.tryParse(_salaryDay.text.trim());
+                final minD = double.tryParse(
+                    _dedMin.text.trim().replaceAll(',', '.'));
+                final maxD = double.tryParse(
+                    _dedMax.text.trim().replaceAll(',', '.'));
+
+                if (name.isEmpty) {
+                  showSnackBar(context, 'Banka adı boş bırakılamaz.',
+                      error: true);
+                  return;
+                }
+                if (currencySym.isEmpty) {
+                  showSnackBar(context, 'Para birimi sembolü boş bırakılamaz.',
+                      error: true);
+                  return;
+                }
+                if (sDay == null || sDay < 1 || sDay > 31) {
+                  showSnackBar(
+                      context, 'Maaş günü 1 ile 31 arasında geçerli bir sayı olmalıdır.',
+                      error: true);
+                  return;
+                }
+                if (minD == null || minD < 0 || maxD == null || maxD < 0) {
+                  showSnackBar(
+                      context, 'Kesinti limitleri sıfırdan küçük olamaz.',
+                      error: true);
+                  return;
+                }
+                if (minD > maxD) {
+                  showSnackBar(
+                      context, 'Minimum kesinti maksimum kesintiden büyük olamaz.',
+                      error: true);
+                  return;
+                }
+
+                try {
+                  final s = BankSettings(
+                    bankName: name,
+                    currency: currencySym,
+                    salaryDay: sDay,
+                    randomDeductionMin: minD,
+                    randomDeductionMax: maxD,
+                  );
+                  context.read<BankProvider>().updateSettings(s);
+                  showSnackBar(context, 'Banka ayarları başarıyla kaydedildi.');
+                } catch (e) {
+                  showSnackBar(
+                      context, e.toString().replaceAll('Exception: ', ''),
+                      error: true);
+                }
+              },
+            ),
           ),
           const SizedBox(height: 40),
           const Divider(),
           const SizedBox(height: 16),
-          Text('Tehlikeli Bölge',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(color: Colors.red)),
+          Text(
+            'Tehlikeli Bölge',
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(color: Colors.red, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
+          const Text(
+            'Tüm şirketleri, kullanıcıları, işlemleri ve ayarları varsayılan başlangıç demo durumuna sıfırlar.',
+            style: TextStyle(fontSize: 13, color: Colors.grey),
+          ),
+          const SizedBox(height: 12),
           OutlinedButton.icon(
             icon: const Icon(Icons.restore, color: Colors.red),
             label: const Text('Tüm Verileri Sıfırla',
                 style: TextStyle(color: Colors.red)),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Colors.red),
+            ),
             onPressed: () => showConfirmDialog(
               context,
-              title: 'Verileri Sıfırla',
+              title: 'Tüm Verileri Sıfırla',
               message:
-                  'Tüm şirketler, kullanıcılar ve işlemler silinecek. Bu işlem geri alınamaz!',
+                  'Tüm şirketler, çalışanlar ve işlem geçmişi kalıcı olarak silinecek ve başlangıç demo verilerine dönülecektir. Bu işlem geri alınamaz!\n\nDevam etmek istiyor musunuz?',
               confirmText: 'Sıfırla',
+              confirmColor: Colors.red,
               onConfirm: () {
                 context.read<BankProvider>().resetAll();
-                showSnackBar(context, 'Sistem sıfırlandı.');
+                _syncControllersWithSettings();
+                showSnackBar(
+                    context, 'Tüm veriler varsayılan duruma sıfırlandı.');
               },
             ),
           ),
