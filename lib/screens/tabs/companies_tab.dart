@@ -33,70 +33,99 @@ class CompaniesTab extends StatelessWidget {
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    leading: CircleAvatar(
-                      radius: 28,
-                      backgroundColor: Colors.indigo.withAlpha(51),
-                      child: const Icon(Icons.business,
-                          color: Colors.indigo, size: 28),
-                    ),
-                    title: Text(
-                      c.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    subtitle: Column(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 4),
-                        Text(
-                          '$empCount çalışan ($activeEmpCount aktif)',
-                          style: const TextStyle(fontSize: 13),
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 28,
+                              backgroundColor: Colors.indigo.withAlpha(51),
+                              child: const Icon(Icons.business,
+                                  color: Colors.indigo, size: 28),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    c.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '$empCount çalışan ($activeEmpCount aktif) • Maaş sınırı: ${money(c.salaryLimit, cur)}',
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    money(c.balance, cur),
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: c.balance >= 0
+                                          ? Colors.green
+                                          : Colors.red,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          money(c.balance, cur),
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: c.balance >= 0 ? Colors.green : Colors.red,
-                          ),
-                        ),
-                      ],
-                    ),
-                    trailing: Wrap(
-                      spacing: 4,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.account_balance_wallet_outlined),
-                          tooltip: 'Bakiye İşlemleri (Yükle / Düş)',
-                          onPressed: () =>
-                              _showBalanceDialog(context, c.id, c.name, c.balance),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.receipt_long_outlined),
-                          tooltip: 'Şirket İşlem Geçmişi',
-                          onPressed: () =>
-                              _showCompanyTxns(context, c.id, c.name),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.red),
-                          tooltip: 'Şirketi Sil',
-                          onPressed: () => showConfirmDialog(
-                            context,
-                            title: 'Şirketi Sil',
-                            message:
-                                '"${c.name}" şirketi sistemden silinecek. Bağlı çalışanlar boşa çıkarılacaktır. Devam etmek istiyor musunuz?',
-                            confirmText: 'Şirketi Sil',
-                            confirmColor: Colors.red,
-                            onConfirm: () {
-                              bank.deleteCompany(c.id);
-                              showSnackBar(context, '"${c.name}" şirketi silindi.');
-                            },
-                          ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 4,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined),
+                              tooltip: 'Şirketi Düzenle',
+                              onPressed: () => _showEditDialog(context, c),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.card_giftcard_outlined),
+                              tooltip: 'Tüm çalışanlara prim dağıt',
+                              onPressed: () =>
+                                  _bulkBonus(context, c.id, c.name),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                  Icons.account_balance_wallet_outlined),
+                              tooltip: 'Bakiye İşlemleri (Yükle / Düş)',
+                              onPressed: () => _showBalanceDialog(
+                                  context, c.id, c.name, c.balance),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.receipt_long_outlined),
+                              tooltip: 'Şirket İşlem Geçmişi',
+                              onPressed: () =>
+                                  _showCompanyTxns(context, c.id, c.name),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline,
+                                  color: Colors.red),
+                              tooltip: 'Şirketi Sil',
+                              onPressed: () => showConfirmDialog(
+                                context,
+                                title: 'Şirketi Sil',
+                                message:
+                                    '"${c.name}" şirketi sistemden silinecek. Bağlı çalışanlar boşa çıkarılacaktır. Devam etmek istiyor musunuz?',
+                                confirmText: 'Şirketi Sil',
+                                confirmColor: Colors.red,
+                                onConfirm: () {
+                                  bank.deleteCompany(c.id);
+                                  showSnackBar(context,
+                                      '"${c.name}" şirketi silindi.');
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -115,6 +144,7 @@ class CompaniesTab extends StatelessWidget {
   void _showAddDialog(BuildContext context) {
     final nameCtrl = TextEditingController();
     final balCtrl = TextEditingController(text: '100000');
+    final limitCtrl = TextEditingController(text: '50000');
     final cur = context.read<BankProvider>().currency;
 
     showDialog(
@@ -144,6 +174,18 @@ class CompaniesTab extends StatelessWidget {
                 border: const OutlineInputBorder(),
               ),
             ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: limitCtrl,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                labelText: 'Çalışan Maaş Sınırı ($cur)',
+                helperText: 'TXT ile eklenen kullanıcılara bu sınıra göre maaş dağıtılır',
+                prefixIcon: const Icon(Icons.payments_outlined),
+                border: const OutlineInputBorder(),
+              ),
+            ),
           ],
         ),
         actions: [
@@ -155,7 +197,9 @@ class CompaniesTab extends StatelessWidget {
             onPressed: () {
               final name = nameCtrl.text.trim();
               final rawBal = balCtrl.text.trim().replaceAll(',', '.');
+              final rawLimit = limitCtrl.text.trim().replaceAll(',', '.');
               final bal = double.tryParse(rawBal);
+              final limit = double.tryParse(rawLimit);
 
               if (name.isEmpty) {
                 showSnackBar(context, 'Şirket adı boş bırakılamaz.',
@@ -167,9 +211,16 @@ class CompaniesTab extends StatelessWidget {
                     error: true);
                 return;
               }
+              if (limit == null || limit <= 0) {
+                showSnackBar(context, 'Geçerli bir maaş sınırı girin.',
+                    error: true);
+                return;
+              }
 
               try {
-                context.read<BankProvider>().addCompany(name, bal);
+                context
+                    .read<BankProvider>()
+                    .addCompany(name, bal, salaryLimit: limit);
                 Navigator.pop(ctx);
                 showSnackBar(context, '"$name" şirketi oluşturuldu.');
               } catch (e) {
@@ -180,6 +231,179 @@ class CompaniesTab extends StatelessWidget {
             child: const Text('Oluştur'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showEditDialog(BuildContext context, Company company) {
+    final nameCtrl = TextEditingController(text: company.name);
+    final limitCtrl =
+        TextEditingController(text: company.salaryLimit.toStringAsFixed(0));
+    final cur = context.read<BankProvider>().currency;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Şirketi Düzenle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Şirket Adı',
+                prefixIcon: Icon(Icons.business),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: limitCtrl,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                labelText: 'Çalışan Maaş Sınırı ($cur)',
+                helperText: 'Kullanıcı maaşları bu üst sınırı aşamaz',
+                prefixIcon: const Icon(Icons.payments_outlined),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('İptal'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final name = nameCtrl.text.trim();
+              final limit = double.tryParse(
+                  limitCtrl.text.trim().replaceAll(',', '.'));
+              if (name.isEmpty) {
+                showSnackBar(context, 'Şirket adı boş bırakılamaz.',
+                    error: true);
+                return;
+              }
+              if (limit == null || limit <= 0) {
+                showSnackBar(context, 'Geçerli bir maaş sınırı girin.',
+                    error: true);
+                return;
+              }
+              try {
+                context.read<BankProvider>().updateCompany(
+                      id: company.id,
+                      name: name,
+                      salaryLimit: limit,
+                    );
+                Navigator.pop(ctx);
+                showSnackBar(context, 'Şirket bilgileri güncellendi.');
+              } catch (e) {
+                showSnackBar(
+                    context, e.toString().replaceAll('Exception: ', ''),
+                    error: true);
+              }
+            },
+            child: const Text('Kaydet'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _bulkBonus(BuildContext context, String companyId, String companyName) {
+    final amountCtrl = TextEditingController();
+    final noteCtrl = TextEditingController(text: 'Şirket geneli toplu prim');
+    final bank = context.read<BankProvider>();
+    final cur = bank.currency;
+    final empCount = bank
+        .usersOfCompany(companyId)
+        .where((u) => u.isActive && u.role != UserRole.superAdmin)
+        .length;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) {
+          final raw = amountCtrl.text.trim().replaceAll(',', '.');
+          final unit = double.tryParse(raw);
+          final total = (unit != null && unit > 0) ? unit * empCount : 0.0;
+          return AlertDialog(
+            title: Text('$companyName - Toplu Prim'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$empCount aktif çalışana aynı anda prim dağıtılacak.',
+                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: amountCtrl,
+                  autofocus: true,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: 'Çalışan başına prim ($cur)',
+                    prefixIcon: const Icon(Icons.card_giftcard),
+                    border: const OutlineInputBorder(),
+                  ),
+                  onChanged: (_) => setS(() {}),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: noteCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Açıklama',
+                    prefixIcon: Icon(Icons.notes),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                if (empCount > 0 && total > 0) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Toplam maliyet: ${money(total, cur)}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('İptal'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final v = double.tryParse(
+                      amountCtrl.text.trim().replaceAll(',', '.'));
+                  if (v == null || v <= 0) {
+                    showSnackBar(context, 'Geçerli bir prim tutarı girin.',
+                        error: true);
+                    return;
+                  }
+                  try {
+                    final n = bank.giveBonusToCompany(
+                      companyId,
+                      v,
+                      noteCtrl.text.trim(),
+                    );
+                    Navigator.pop(ctx);
+                    showSnackBar(context,
+                        '$n çalışana ${money(v, cur)} prim dağıtıldı.');
+                  } catch (e) {
+                    showSnackBar(
+                        context, e.toString().replaceAll('Exception: ', ''),
+                        error: true);
+                  }
+                },
+                child: const Text('Dağıt'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

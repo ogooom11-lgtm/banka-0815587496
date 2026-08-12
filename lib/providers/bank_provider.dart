@@ -12,6 +12,13 @@ export '../models/company.dart';
 export '../models/transaction.dart';
 export '../models/bank_settings.dart';
 
+class ImportUsersResult {
+  final int added;
+  final List<String> skipped;
+
+  const ImportUsersResult({required this.added, required this.skipped});
+}
+
 /// Güvenli, platformlar arası tutarlı hash (DJB2 32-bit)
 String _hash(String s) {
   int hash = 5381;
@@ -100,6 +107,7 @@ class BankProvider extends ChangeNotifier {
       id: 'comp-001',
       name: 'TechCorp A.Ş.',
       balance: 1000000,
+      salaryLimit: 50000,
       createdAt: now,
     );
     _companies.add(c);
@@ -148,20 +156,30 @@ class BankProvider extends ChangeNotifier {
     ));
   }
 
-  // ---------- Auth ----------
-  bool login(String email, String password) {
+  // ---------- Auth (yalnızca yönetici) ----------
+  /// Başarılıysa `null`, aksi halde kullanıcıya gösterilecek hata metni.
+  String? login(String email, String password) {
     final cleanEmail = email.trim().toLowerCase();
     final hash = _hash(password);
+    AppUser? found;
     for (final u in _users) {
-      if (u.email.toLowerCase() == cleanEmail &&
-          u.passwordHash == hash &&
-          u.isActive) {
-        currentUser = u;
-        notifyListeners();
-        return true;
+      if (u.email.toLowerCase() == cleanEmail && u.passwordHash == hash) {
+        found = u;
+        break;
       }
     }
-    return false;
+    if (found == null) {
+      return 'E-posta veya şifre hatalı.';
+    }
+    if (!found.isActive) {
+      return 'Hesap aktif değil.';
+    }
+    if (found.role != UserRole.superAdmin) {
+      return 'Bu panele yalnızca yönetici giriş yapabilir.';
+    }
+    currentUser = found;
+    notifyListeners();
+    return null;
   }
 
   void logout() {
@@ -170,7 +188,7 @@ class BankProvider extends ChangeNotifier {
   }
 
   // ---------- Şirket yönetimi ----------
-  void addCompany(String name, double balance) {
+  void addCompany(String name, double balance, {double salaryLimit = 50000}) {
     final cleanName = name.trim();
     if (cleanName.isEmpty) {
       throw Exception('Şirket adı boş bırakılamaz.');
@@ -178,11 +196,15 @@ class BankProvider extends ChangeNotifier {
     if (balance < 0) {
       throw Exception('Başlangıç bakiyesi negatif olamaz.');
     }
+    if (salaryLimit <= 0) {
+      throw Exception('Çalışan maaş sınırı sıfırdan büyük olmalıdır.');
+    }
 
     final c = Company(
       id: 'comp-${DateTime.now().microsecondsSinceEpoch}',
       name: cleanName,
       balance: balance,
+      salaryLimit: salaryLimit,
       createdAt: DateTime.now(),
     );
     _companies.add(c);
@@ -248,6 +270,32 @@ class BankProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateCompany({
+    required String id,
+    String? name,
+    double? salaryLimit,
+  }) {
+    final c = _companies.firstWhere(
+      (x) => x.id == id,
+      orElse: () => throw Exception('Şirket bulunamadı.'),
+    );
+    if (name != null) {
+      final cleanName = name.trim();
+      if (cleanName.isEmpty) {
+        throw Exception('Şirket adı boş bırakılamaz.');
+      }
+      c.name = cleanName;
+    }
+    if (salaryLimit != null) {
+      if (salaryLimit <= 0) {
+        throw Exception('Çalışan maaş sınırı sıfırdan büyük olmalıdır.');
+      }
+      c.salaryLimit = salaryLimit;
+    }
+    _persist();
+    notifyListeners();
+  }
+
   void deleteCompany(String id) {
     _companies.removeWhere((c) => c.id == id);
     for (final u in _users.where((u) => u.companyId == id)) {
@@ -258,10 +306,59 @@ class BankProvider extends ChangeNotifier {
   }
 
   // ---------- Kullanıcı yönetimi ----------
+  String _slugify(String input) {
+    const map = {
+      'ç': 'c',
+      'Ç': 'c',
+      'ğ': 'g',
+      'Ğ': 'g',
+      'ı': 'i',
+      'İ': 'i',
+      'ö': 'o',
+      'Ö': 'o',
+      'ş': 's',
+      'Ş': 's',
+      'ü': 'u',
+      'Ü': 'u',
+    };
+    final buf = StringBuffer();
+    for (final r in input.runes) {
+      final ch = String.fromCharCode(r);
+      buf.write(map[ch] ?? ch);
+    }
+    final slug = buf
+        .toString()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9\s.]'), '')
+        .trim()
+        .replaceAll(RegExp(r'\s+'), '.');
+    return slug.isEmpty ? 'kullanici' : slug;
+  }
+
+  String _generateEmail(String fullName) {
+    final slug = _slugify(fullName);
+    var email = '$slug@bank.local';
+    var i = 1;
+    while (_users.any((u) => u.email.toLowerCase() == email)) {
+      email = '$slug$i@bank.local';
+      i++;
+    }
+    return email;
+  }
+
+  /// Şirket maaş sınırına göre (sınırın %50–%100 aralığında) maaş dağıtır.
+  double distributeSalary(double salaryLimit) {
+    if (salaryLimit <= 0) return 0;
+    final minS = salaryLimit * 0.5;
+    final raw = minS + _rnd.nextDouble() * (salaryLimit - minS);
+    final rounded = (raw / 100).round() * 100.0;
+    return rounded.clamp(1, salaryLimit).toDouble();
+  }
+
   void addUser({
     required String fullName,
-    required String email,
-    required String password,
+    String? email,
+    String? password,
     required UserRole role,
     String? companyId,
     String title = 'Çalışan',
@@ -269,21 +366,27 @@ class BankProvider extends ChangeNotifier {
     DateTime? salaryDate,
     DateTime? contractEnd,
     double terminationFee = 0,
+    bool persist = true,
   }) {
-    final cleanEmail = email.trim().toLowerCase();
     final cleanName = fullName.trim();
-
     if (cleanName.isEmpty) {
       throw Exception('Ad Soyad boş bırakılamaz.');
     }
-    if (cleanEmail.isEmpty || !cleanEmail.contains('@')) {
+
+    final cleanEmail = (email == null || email.trim().isEmpty)
+        ? _generateEmail(cleanName)
+        : email.trim().toLowerCase();
+    if (!cleanEmail.contains('@')) {
       throw Exception('Geçerli bir e-posta adresi girin.');
-    }
-    if (password.length < 4) {
-      throw Exception('Şifre en az 4 karakter olmalıdır.');
     }
     if (_users.any((u) => u.email.toLowerCase() == cleanEmail)) {
       throw Exception('Bu e-posta adresi zaten kullanılıyor.');
+    }
+
+    final rawPassword =
+        (password == null || password.isEmpty) ? '123456' : password;
+    if (rawPassword.length < 4) {
+      throw Exception('Şifre en az 4 karakter olmalıdır.');
     }
     if (salary < 0) {
       throw Exception('Maaş negatif olamaz.');
@@ -292,15 +395,26 @@ class BankProvider extends ChangeNotifier {
       throw Exception('Fesih ücreti negatif olamaz.');
     }
 
+    if (companyId != null) {
+      final company = companyById(companyId);
+      if (company == null) {
+        throw Exception('Seçilen şirket bulunamadı.');
+      }
+      if (company.salaryLimit > 0 && salary > company.salaryLimit) {
+        throw Exception(
+            'Maaş, ${company.name} şirketinin maaş sınırını (${salary.toStringAsFixed(0)} > ${company.salaryLimit.toStringAsFixed(0)} $currency) aşıyor.');
+      }
+    }
+
     final now = DateTime.now();
     final sDate = salaryDate ??
         DateTime(now.year, now.month, settings.salaryDay.clamp(1, 28));
 
     final u = AppUser(
-      id: 'usr-${DateTime.now().microsecondsSinceEpoch}',
+      id: 'usr-${DateTime.now().microsecondsSinceEpoch}-${_rnd.nextInt(9999)}',
       fullName: cleanName,
       email: cleanEmail,
-      passwordHash: _hash(password),
+      passwordHash: _hash(rawPassword),
       role: role,
       companyId: companyId,
       title: title.trim().isEmpty ? 'Çalışan' : title.trim(),
@@ -312,9 +426,76 @@ class BankProvider extends ChangeNotifier {
     );
     _users.add(u);
     addTxn(TxnType.system, 0, 'BANK', u.id,
-        'Kullanıcı hesabı oluşturuldu: $cleanName ($cleanEmail)');
-    _persist();
-    notifyListeners();
+        'Kullanıcı hesabı oluşturuldu: $cleanName');
+    if (persist) {
+      _persist();
+      notifyListeners();
+    }
+  }
+
+  /// TXT içindeki isimleri şirket maaş sınırına göre kullanıcı olarak ekler.
+  /// Her kullanıcıya 1–5 yıl sözleşme ve maaşın 2 veya 3 katı fesih cezası atanır.
+  ImportUsersResult importUsersFromNames({
+    required List<String> names,
+    required String companyId,
+  }) {
+    final company = _companies.firstWhere(
+      (x) => x.id == companyId,
+      orElse: () => throw Exception('Şirket bulunamadı.'),
+    );
+    if (company.salaryLimit <= 0) {
+      throw Exception(
+          '${company.name} için çalışan maaş sınırı belirlenmemiş.');
+    }
+
+    final unique = <String>[];
+    final seen = <String>{};
+    for (final raw in names) {
+      final name = raw.trim().replaceAll(RegExp(r'\s+'), ' ');
+      if (name.isEmpty) continue;
+      final key = name.toLowerCase();
+      if (seen.add(key)) unique.add(name);
+    }
+    if (unique.isEmpty) {
+      throw Exception('Eklenecek geçerli bir isim bulunamadı.');
+    }
+
+    int added = 0;
+    final skipped = <String>[];
+    final now = DateTime.now();
+
+    for (final name in unique) {
+      final salary = distributeSalary(company.salaryLimit);
+      final years = 1 + _rnd.nextInt(5); // 1–5 yıl
+      final multiplier = _rnd.nextBool() ? 2 : 3;
+      try {
+        addUser(
+          fullName: name,
+          role: UserRole.employee,
+          companyId: companyId,
+          salary: salary,
+          contractEnd: now.add(Duration(days: years * 365)),
+          terminationFee: salary * multiplier,
+          persist: false,
+        );
+        added++;
+      } catch (_) {
+        skipped.add(name);
+      }
+    }
+
+    if (added > 0) {
+      addTxn(
+        TxnType.system,
+        0,
+        'BANK',
+        company.id,
+        'TXT ile $added kullanıcı eklendi (${company.name})',
+      );
+      _persist();
+      notifyListeners();
+    }
+    return ImportUsersResult(added: added, skipped: skipped);
   }
 
   void updateUser(AppUser updated) {
@@ -413,6 +594,45 @@ class BankProvider extends ChangeNotifier {
   }
 
   // ---------- Prim ----------
+  /// Şirketin tüm aktif çalışanlarına aynı anda aynı tutarda prim dağıtır.
+  int giveBonusToCompany(String companyId, double amount, [String? note]) {
+    if (amount <= 0) {
+      throw Exception('Prim tutarı sıfırdan büyük olmalıdır.');
+    }
+    final company = _companies.firstWhere(
+      (x) => x.id == companyId,
+      orElse: () => throw Exception('Şirket bulunamadı.'),
+    );
+    final employees = _users
+        .where((u) =>
+            u.companyId == companyId &&
+            u.role != UserRole.superAdmin &&
+            u.isActive)
+        .toList();
+    if (employees.isEmpty) {
+      throw Exception('Bu şirkette prim verilecek aktif çalışan bulunmuyor.');
+    }
+
+    final total = amount * employees.length;
+    if (company.balance < total) {
+      throw Exception(
+          'Şirket bakiyesi yetersiz. ${employees.length} çalışana toplam ${total.toStringAsFixed(2)} $currency gerekli.');
+    }
+
+    final desc = note != null && note.trim().isNotEmpty
+        ? note.trim()
+        : 'Şirket geneli toplu prim';
+
+    for (final u in employees) {
+      company.balance -= amount;
+      u.balance += amount;
+      addTxn(TxnType.bonus, amount, company.id, u.id, desc);
+    }
+    _persist();
+    notifyListeners();
+    return employees.length;
+  }
+
   void giveBonus(String userId, double amount, [String? note]) {
     if (amount <= 0) {
       throw Exception('Prim tutarı sıfırdan büyük olmalıdır.');

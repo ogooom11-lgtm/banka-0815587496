@@ -24,7 +24,10 @@ flutter run -d chrome  # web için
 ### Süper Admin (Banka Sahibi)
 - 👑 **Sınırsız yetki** — tüm sistem ayarlarını değiştirir
 - 🏢 **Şirket yönetimi** — şirket oluşturma, kredi yükleme/düşme, silme
-- 👥 **Kullanıcı yönetimi** — çalışan ekleme, silme, düzenleme
+- 👥 **Kullanıcı yönetimi** — e-posta / şifre / unvan istemeden çalışan ekleme
+- 📄 **TXT ile toplu ekleme** — her satırdaki isim kullanıcı olur; maaş şirket sınırına göre dağıtılır, sözleşme 1–5 yıl, fesih cezası maaşın 2 veya 3 katıdır
+- 🔎 **Kullanıcı arama** — ada, şirkete ve unvana göre arama kutuları
+- 🎁 **Toplu prim** — şirketin tüm çalışanlarına aynı anda prim dağıtma
 - 💰 **Maaş sistemi** — belirlenen günde otomatik/manuel ödeme
 - 🎁 **Performans primi** — tek seferlik veya aylık prim
 - ⚠️ **Ceza sistemi** — sabit tutar veya maaş yüzdesi üzerinden
