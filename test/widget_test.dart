@@ -60,4 +60,32 @@ void main() {
     expect(find.text('Toplu Prim Dağıt'), findsOneWidget);
     expect(find.text('Yeni Kullanıcı'), findsOneWidget);
   });
+
+  testWidgets('admin can edit user name in users tab',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const BankApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Giriş Yap'));
+    await tester.pumpAndSettle();
+
+    final usersNav = find.text('Kullanıcılar');
+    await tester.tap(usersNav.first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ahmet Yılmaz'), findsOneWidget);
+    final editIcon = find.byTooltip('İsmi Düzenle');
+    expect(editIcon, findsWidgets);
+
+    await tester.tap(editIcon.first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('İsmi Düzenle'), findsOneWidget);
+    final nameField = find.widgetWithText(TextField, 'Ahmet Yılmaz');
+    await tester.enterText(nameField, 'Ahmet Demir');
+    await tester.tap(find.text('Kaydet'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ahmet Demir'), findsOneWidget);
+  });
 }

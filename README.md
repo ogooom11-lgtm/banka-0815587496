@@ -25,6 +25,7 @@ flutter run -d chrome  # web için
 - 👑 **Sınırsız yetki** — tüm sistem ayarlarını değiştirir
 - 🏢 **Şirket yönetimi** — şirket oluşturma, kredi yükleme/düşme, silme
 - 👥 **Kullanıcı yönetimi** — e-posta / şifre / unvan istemeden çalışan ekleme
+- ✏️ **İsim düzenleme** — çalışan ve yönetici isimlerini doğrudan değiştirme
 - 📄 **TXT ile toplu ekleme** — her satırdaki isim kullanıcı olur; maaş şirket sınırına göre dağıtılır, sözleşme 1–5 yıl, fesih cezası maaşın 2 veya 3 katıdır
 - 🔎 **Kullanıcı arama** — ada, şirkete ve unvana göre arama kutuları
 - 🎁 **Toplu prim** — şirketin tüm çalışanlarına aynı anda prim dağıtma

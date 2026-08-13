@@ -105,4 +105,15 @@ void main() {
     bank.updateCompany(id: 'comp-001', salaryLimit: 75000);
     expect(bank.companyById('comp-001')!.salaryLimit, 75000);
   });
+
+  test('kullanıcı adı güncellenir', () {
+    final emp = bank.users.firstWhere((u) => u.role == UserRole.employee);
+    bank.updateUserName(emp.id, 'Mehmet Demir');
+    expect(bank.userById(emp.id)?.fullName, 'Mehmet Demir');
+
+    expect(
+      () => bank.updateUserName(emp.id, '   '),
+      throwsA(isA<Exception>()),
+    );
+  });
 }

@@ -199,6 +199,14 @@ class _UsersTabState extends State<UsersTab> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                              const SizedBox(width: 4),
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, size: 16),
+                                tooltip: 'İsmi Düzenle',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: () => _editName(context, u),
+                              ),
                               if (!u.isActive) ...[
                                 const SizedBox(width: 8),
                                 Container(
@@ -268,6 +276,12 @@ class _UsersTabState extends State<UsersTab> {
                                     spacing: 8,
                                     runSpacing: 8,
                                     children: [
+                                      FilledButton.tonalIcon(
+                                        icon: const Icon(Icons.edit_outlined,
+                                            size: 18),
+                                        label: const Text('İsmi Düzenle'),
+                                        onPressed: () => _editName(context, u),
+                                      ),
                                       FilledButton.tonalIcon(
                                         icon: const Icon(
                                             Icons.payments_outlined,
@@ -412,6 +426,76 @@ class _UsersTabState extends State<UsersTab> {
           Text(label,
               style: const TextStyle(color: Colors.grey, fontSize: 13)),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  void _editName(BuildContext context, AppUser u) {
+    final nameCtrl = TextEditingController(text: u.fullName);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('İsmi Düzenle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Ad Soyad',
+                prefixIcon: Icon(Icons.person_outline),
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: (_) {
+                final clean = nameCtrl.text.trim();
+                if (clean.isEmpty) {
+                  showSnackBar(context, 'Ad Soyad boş bırakılamaz.',
+                      error: true);
+                  return;
+                }
+                try {
+                  context.read<BankProvider>().updateUserName(u.id, clean);
+                  Navigator.pop(ctx);
+                  showSnackBar(
+                      context, 'Kullanıcı adı "$clean" olarak güncellendi.');
+                } catch (e) {
+                  showSnackBar(
+                      context, e.toString().replaceAll('Exception: ', ''),
+                      error: true);
+                }
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('İptal'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final clean = nameCtrl.text.trim();
+              if (clean.isEmpty) {
+                showSnackBar(context, 'Ad Soyad boş bırakılamaz.',
+                    error: true);
+                return;
+              }
+              try {
+                context.read<BankProvider>().updateUserName(u.id, clean);
+                Navigator.pop(ctx);
+                showSnackBar(
+                    context, 'Kullanıcı adı "$clean" olarak güncellendi.');
+              } catch (e) {
+                showSnackBar(
+                    context, e.toString().replaceAll('Exception: ', ''),
+                    error: true);
+              }
+            },
+            child: const Text('Kaydet'),
+          ),
         ],
       ),
     );

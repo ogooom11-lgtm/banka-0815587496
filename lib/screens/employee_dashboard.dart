@@ -100,13 +100,28 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Merhaba, ${u.fullName}',
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              'Merhaba, ${u.fullName}',
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined,
+                                color: Colors.white70, size: 20),
+                            tooltip: 'İsmi Düzenle',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () => _editName(context, u),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -320,6 +335,74 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _editName(BuildContext context, AppUser u) {
+    final nameCtrl = TextEditingController(text: u.fullName);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('İsmi Düzenle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Yeni Ad Soyad',
+                prefixIcon: Icon(Icons.person_outline),
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: (_) {
+                final clean = nameCtrl.text.trim();
+                if (clean.isEmpty) {
+                  showSnackBar(context, 'Ad Soyad boş bırakılamaz.',
+                      error: true);
+                  return;
+                }
+                try {
+                  context.read<BankProvider>().updateUserName(u.id, clean);
+                  Navigator.pop(ctx);
+                  showSnackBar(context, 'İsminiz başarıyla güncellendi.');
+                } catch (e) {
+                  showSnackBar(
+                      context, e.toString().replaceAll('Exception: ', ''),
+                      error: true);
+                }
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('İptal'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final clean = nameCtrl.text.trim();
+              if (clean.isEmpty) {
+                showSnackBar(context, 'Ad Soyad boş bırakılamaz.',
+                    error: true);
+                return;
+              }
+              try {
+                context.read<BankProvider>().updateUserName(u.id, clean);
+                Navigator.pop(ctx);
+                showSnackBar(context, 'İsminiz başarıyla güncellendi.');
+              } catch (e) {
+                showSnackBar(
+                    context, e.toString().replaceAll('Exception: ', ''),
+                    error: true);
+              }
+            },
+            child: const Text('Kaydet'),
+          ),
+        ],
       ),
     );
   }

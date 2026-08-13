@@ -510,6 +510,31 @@ class BankProvider extends ChangeNotifier {
     }
   }
 
+  void updateUserName(String userId, String newName) {
+    final cleanName = newName.trim();
+    if (cleanName.isEmpty) {
+      throw Exception('Ad Soyad boş bırakılamaz.');
+    }
+    final u = _users.firstWhere(
+      (x) => x.id == userId,
+      orElse: () => throw Exception('Kullanıcı bulunamadı.'),
+    );
+    final oldName = u.fullName;
+    u.fullName = cleanName;
+    if (currentUser?.id == userId) {
+      currentUser = u;
+    }
+    addTxn(
+      TxnType.system,
+      0,
+      'BANK',
+      u.id,
+      'Kullanıcı adı güncellendi: $oldName → $cleanName',
+    );
+    _persist();
+    notifyListeners();
+  }
+
   void deleteUser(String id) {
     _users.removeWhere((u) => u.id == id);
     if (currentUser?.id == id) {

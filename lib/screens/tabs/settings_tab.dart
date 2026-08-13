@@ -13,6 +13,7 @@ class SettingsTab extends StatefulWidget {
 
 class _SettingsTabState extends State<SettingsTab> {
   late TextEditingController _bankName;
+  late TextEditingController _adminName;
   late TextEditingController _currency;
   late TextEditingController _dedMin;
   late TextEditingController _dedMax;
@@ -21,8 +22,11 @@ class _SettingsTabState extends State<SettingsTab> {
   @override
   void initState() {
     super.initState();
-    final s = context.read<BankProvider>().settings;
+    final bank = context.read<BankProvider>();
+    final s = bank.settings;
     _bankName = TextEditingController(text: s.bankName);
+    _adminName = TextEditingController(
+        text: bank.currentUser?.fullName ?? 'Banka Sahibi');
     _currency = TextEditingController(text: s.currency);
     _dedMin =
         TextEditingController(text: s.randomDeductionMin.toStringAsFixed(0));
@@ -32,8 +36,10 @@ class _SettingsTabState extends State<SettingsTab> {
   }
 
   void _syncControllersWithSettings() {
-    final s = context.read<BankProvider>().settings;
+    final bank = context.read<BankProvider>();
+    final s = bank.settings;
     _bankName.text = s.bankName;
+    _adminName.text = bank.currentUser?.fullName ?? 'Banka Sahibi';
     _currency.text = s.currency;
     _dedMin.text = s.randomDeductionMin.toStringAsFixed(0);
     _dedMax.text = s.randomDeductionMax.toStringAsFixed(0);
@@ -43,6 +49,7 @@ class _SettingsTabState extends State<SettingsTab> {
   @override
   void dispose() {
     _bankName.dispose();
+    _adminName.dispose();
     _currency.dispose();
     _dedMin.dispose();
     _dedMax.dispose();
@@ -84,6 +91,15 @@ class _SettingsTabState extends State<SettingsTab> {
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _adminName,
+                    decoration: const InputDecoration(
+                      labelText: 'Yönetici Adı (Süper Admin)',
+                      prefixIcon: Icon(Icons.person_outline),
+                      border: OutlineInputBorder(),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -176,6 +192,7 @@ class _SettingsTabState extends State<SettingsTab> {
               icon: const Icon(Icons.save),
               label: const Text('Ayarları Kaydet'),
               onPressed: () {
+                final adminName = _adminName.text.trim();
                 final name = _bankName.text.trim();
                 final currencySym = _currency.text.trim();
                 final sDay = int.tryParse(_salaryDay.text.trim());
@@ -184,6 +201,11 @@ class _SettingsTabState extends State<SettingsTab> {
                 final maxD = double.tryParse(
                     _dedMax.text.trim().replaceAll(',', '.'));
 
+                if (adminName.isEmpty) {
+                  showSnackBar(context, 'Yönetici adı boş bırakılamaz.',
+                      error: true);
+                  return;
+                }
                 if (name.isEmpty) {
                   showSnackBar(context, 'Banka adı boş bırakılamaz.',
                       error: true);
@@ -214,6 +236,7 @@ class _SettingsTabState extends State<SettingsTab> {
                 }
 
                 try {
+                  final bank = context.read<BankProvider>();
                   final s = BankSettings(
                     bankName: name,
                     currency: currencySym,
@@ -221,7 +244,11 @@ class _SettingsTabState extends State<SettingsTab> {
                     randomDeductionMin: minD,
                     randomDeductionMax: maxD,
                   );
-                  context.read<BankProvider>().updateSettings(s);
+                  bank.updateSettings(s);
+                  final current = bank.currentUser;
+                  if (current != null && current.fullName != adminName) {
+                    bank.updateUserName(current.id, adminName);
+                  }
                   showSnackBar(context, 'Banka ayarları başarıyla kaydedildi.');
                 } catch (e) {
                   showSnackBar(

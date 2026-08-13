@@ -42,6 +42,73 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     Icons.settings_outlined,
   ];
 
+  void _editAdminName(BuildContext context, AppUser u) {
+    final nameCtrl = TextEditingController(text: u.fullName);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Yönetici İsmini Düzenle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Yeni Ad Soyad',
+                prefixIcon: Icon(Icons.person_outline),
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: (_) {
+                final clean = nameCtrl.text.trim();
+                if (clean.isEmpty) {
+                  showSnackBar(context, 'Ad Soyad boş bırakılamaz.',
+                      error: true);
+                  return;
+                }
+                try {
+                  context.read<BankProvider>().updateUserName(u.id, clean);
+                  Navigator.pop(ctx);
+                  showSnackBar(context, 'Yönetici adı güncellendi.');
+                } catch (e) {
+                  showSnackBar(
+                      context, e.toString().replaceAll('Exception: ', ''),
+                      error: true);
+                }
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('İptal'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final clean = nameCtrl.text.trim();
+              if (clean.isEmpty) {
+                showSnackBar(context, 'Ad Soyad boş bırakılamaz.',
+                    error: true);
+                return;
+              }
+              try {
+                context.read<BankProvider>().updateUserName(u.id, clean);
+                Navigator.pop(ctx);
+                showSnackBar(context, 'Yönetici adı güncellendi.');
+              } catch (e) {
+                showSnackBar(
+                    context, e.toString().replaceAll('Exception: ', ''),
+                    error: true);
+              }
+            },
+            child: const Text('Kaydet'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bank = context.watch<BankProvider>();
@@ -105,13 +172,29 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             },
           ),
           const SizedBox(width: 8),
-          Center(
-            child: Text(
-              bank.currentUser?.fullName ?? '',
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+          InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () {
+              final u = bank.currentUser;
+              if (u != null) _editAdminName(context, u);
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    bank.currentUser?.fullName ?? '',
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.edit_outlined, size: 14),
+                ],
+              ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           IconButton(
             tooltip: 'Çıkış Yap',
             icon: const Icon(Icons.logout),
